@@ -1,4 +1,4 @@
-import 'package:pbkk_isar/models/enums.dart';
+
 import 'package:isar/isar.dart';
 
 part 'todo.g.dart';
@@ -9,21 +9,22 @@ class Todo {
 
   @Index(type: IndexType.value)
   String? content;
-
-  @enumerated
-  Status status = Status.pending;
+  String? title;
+  String? caption;
 
   DateTime createdAt = DateTime.now();
   DateTime updatedAt = DateTime.now();
 
   Todo copyWith({
     String? content,
-    Status? status,
+    String? title,
+    String? caption,
   }) {
     return Todo()..id = id
         ..createdAt = createdAt
         ..updatedAt = DateTime.now()
         ..content = content ?? this.content
-        ..status = status ?? this.status;
+        ..title = title ?? this.title
+        ..caption = caption ?? this.caption;
   }
 }

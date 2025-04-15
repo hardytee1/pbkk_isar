@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:pbkk_isar/models/enums.dart';
 import 'package:pbkk_isar/models/todo.dart';
 import 'package:pbkk_isar/services/database_service.dart';
 
@@ -35,7 +34,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    // TODO: implement deactivate
     todoStream?.cancel();
     super.dispose();
   }
@@ -56,44 +54,61 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildIU(){
-    return Padding(padding: EdgeInsets.symmetric(
-      vertical: 20,
-      horizontal: 10,
-    ),
-    child: ListView.builder(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+      child: ListView.builder(
         itemCount: todos.length,
         itemBuilder: (context, index) {
           final todo = todos[index];
-      return Card(
-        child: ListTile(
-        title:Text(
-          todo.content ?? "",
-        ),
-        subtitle: Text("Marked ${todo.status.name} at ${todo.updatedAt}"),
-        trailing:  Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            IconButton(onPressed: () {
-              _addOrEditTodo(todo: todo,
-              );
-            }, icon: const Icon(Icons.edit,),
+          return Card(
+            margin: EdgeInsets.all(8.0),
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    todo.title ?? 'No Title',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  // Caption text
+                  Text(todo.caption ?? 'No Caption'),
+                  SizedBox(height: 8),
+                  Image.network(
+                    todo.content ?? 'No Content',
+                    errorBuilder: (context, error, stackTrace) {
+                      return Text('Error loading image');
+                    },
+                  ),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () {
+                          _addOrEditTodo(todo: todo,
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () async {
+                          await DatabaseService.db.writeTxn(() async {
+                            await DatabaseService.db.todos.delete(todo.id,
+                            );
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            IconButton(onPressed: () async {
-              await DatabaseService.db.writeTxn(() async {
-                await DatabaseService.db.todos.delete(todo.id,
-                );
-              });
-            }, icon: const Icon(
-              Icons.delete,
-              color: Colors.red,
-            ),
-            ),
-          ],
-        ),
-        )
-      );
+          );
     }),
     );
   }
@@ -102,8 +117,8 @@ class _HomePageState extends State<HomePage> {
     Todo? todo,
 }) {
     TextEditingController contentController = TextEditingController(text :todo?.content?? "");
-
-    Status status = todo?.status ?? Status.pending;
+    TextEditingController titleController = TextEditingController(text :todo?.title?? "");
+    TextEditingController captionController = TextEditingController(text :todo?.caption?? "");
 
     showDialog(context: context, builder: (context)
     {
@@ -112,24 +127,21 @@ class _HomePageState extends State<HomePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: contentController,
+            TextField(controller: titleController,
             decoration: const InputDecoration(
-              labelText: 'Content',
+              labelText: 'Title',
             ),
             ),
-            DropdownButtonFormField<Status>(
-              value: status,
-                items: Status.values.map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e.name),
-                    ),
-                )
-                .toList(),
-                onChanged: (value) {
-                if(value ==null) return;
-                status = value;
-                }),
+            TextField(controller: contentController,
+              decoration: const InputDecoration(
+                labelText: 'Image URL',
+              ),
+            ),
+            TextField(controller: captionController,
+              decoration: const InputDecoration(
+                labelText: 'Caption',
+              ),
+            ),
           ],
         ),
         actions: [
@@ -138,17 +150,19 @@ class _HomePageState extends State<HomePage> {
         }, child: const Text('Cancel'),
         ),
         TextButton(onPressed: () async {
-          if (contentController.text.isNotEmpty){
+          if (titleController.text.isNotEmpty){
             late Todo newTodo;
             if (todo != null){
               newTodo = todo.copyWith(
+                  title: titleController.text,
+                  caption: captionController.text,
                   content: contentController.text,
-                  status: status,
               );
             }else{
               newTodo = Todo().copyWith(
+                title: titleController.text,
+                caption: captionController.text,
                 content: contentController.text,
-                status: status,
               );
             }
             await DatabaseService.db.writeTxn(
