@@ -139,11 +139,18 @@ class _HomePageState extends State<HomePage> {
         ),
         TextButton(onPressed: () async {
           if (contentController.text.isNotEmpty){
-            Todo newTodo = Todo();
-            newTodo = newTodo.copyWith(
+            late Todo newTodo;
+            if (todo != null){
+              newTodo = todo.copyWith(
+                  content: contentController.text,
+                  status: status,
+              );
+            }else{
+              newTodo = Todo().copyWith(
                 content: contentController.text,
                 status: status,
-            );
+              );
+            }
             await DatabaseService.db.writeTxn(
                 () async {
                   await DatabaseService.db.todos.put(
